@@ -284,10 +284,6 @@ void setupGPS() {
   uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
   sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
   
-  delay(1000);
-  
-  checkNAV();
-  
 }
 
 void PSMgps(){
@@ -491,40 +487,33 @@ void gps_get_time()
     }
 }
 
-//Function to poll the NAV5 status of a Ublox GPS module (5/6)
-//Sends a UBX command (requires the function sendUBX()) and waits 3 seconds
-// for a reply from the module. The then isolates the byte which contains 
-// the information regarding the NAV5 mode,
-// 0 = Pedestrian mode (default, will not work above 12km)
-// 6 = Airborne 1G (works up to 50km altitude)
-//Adapted by jcoxon from getUBX_ACK() from the example code on UKHAS wiki
-// http://wiki.ukhas.org.uk/guides:falcom_fsa03
-boolean checkNAV(){
-  uint8_t b, bytePos = 0;
-  uint8_t getNAV5[] = { 0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84 }; //Poll NAV5 status
- 
-  Serial.flush();
-  unsigned long startTime = millis();
-  sendUBX(getNAV5, sizeof(getNAV5)/sizeof(uint8_t));
- 
-  while (1) {
-    // Make sure data is available to read
-    if (Serial.available()) {
-      b = Serial.read();
- 
-      if(bytePos == 8){
-        navmode = b;
-        return true;
-      }
- 
-      bytePos++;
+/**
+ * Verify that the uBlox 6 GPS receiver is set to the <1g airborne
+ * navigaion mode.
+ */
+uint8_t gps_check_nav(void)
+{
+    uint8_t request[8] = {0xB5, 0x62, 0x06, 0x24, 0x00, 0x00,
+        0x2A, 0x84};
+    sendUBX(request, 8);
+
+    // Get the message back from the GPS
+    gps_get_data();
+
+    // Verify sync and header bytes
+    if( buf[0] != 0xB5 || buf[1] != 0x62 ){
+      GPSerror = 41;
     }
-    // Timeout if no valid response in 3 seconds
-    if (millis() - startTime > 1000) {
-      navmode = 0;
-      return false;
+    if( buf[2] != 0x06 || buf[3] != 0x24 ){
+      GPSerror = 42;
     }
-  }
+    // Check 40 bytes of message checksum
+    if( !_gps_verify_checksum(&buf[2], 40) ) {
+      GPSerror = 43;
+    }
+
+    // Return the navigation mode and let the caller analyse it
+    navmode = buf[8];
 }
 
 void setup() {
@@ -543,33 +532,27 @@ void setup() {
 void loop() {
   count++;
   
-  gps_check_lock();
+  gps_check_nav();
   
-  if( lock == 0x03 || lock == 0x04 )
-  {   
-    gps_get_position();
-    gps_get_time();
-    
-    //Occasionally the GPS doesn't properly respond with useful data, we need to try and filter
-    // this out - here we look for a change in latitude (which should occur even at rest due to 
-    // GPS drift and also we'll look for a change in time (total_time = hour+mins+secs to create
-    // a relatively unique number).
-      battV = analogRead(2);
-      n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, navmode, radio_power);
-      n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
-      radio1.write(0x07, 0x08); // turn tx on`
-      rtty_txstring(superbuffer);
-      delay(1000);
-    oldLat = lat;
-    old_total_time = total_time;
+  if(navmode != 6) {
+    // Check and set the navigation mode (Airborne, 1G)
+    uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
+    sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
   }
-  else{
-    delay(250);
-    radio1.write(0x07, 0x08); //on
-    delay(500);
-    radio1.write(0x07, 0x01); //off
-    delay(250);
-  }
+  
+  gps_check_lock();
+  gps_get_position();
+  gps_get_time();
+
+
+  battV = analogRead(2);
+  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, battV, navmode, radio_power);
+  n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
+  radio1.write(0x07, 0x08); // turn tx on`
+  rtty_txstring(superbuffer);
+  delay(1000);
+  //oldLat = lat;
+  //old_total_time = total_time;
   
   if (count % 2 == 0){
     digitalWrite(A3, HIGH);
@@ -597,14 +580,4 @@ void loop() {
   //  radio1.write(0x6D, 0x04);// turn tx low power 11db
   //}
 */
-
-
-  // Check that we are in high altitude mode, if not setup the GPS module again.
-  if (count % 50 == 0){
-    checkNAV();
-    if (navmode != 6){
-      setupGPS();
-    }
-  }
-    
 }
