@@ -522,34 +522,6 @@ boolean checkNAV(){
   }
 }
 
-//From http://arduino.cc/playground/Main/InternalTemperatureSensor
-int getTemp(void)
-{
-  unsigned int wADC;
-
-  // The internal temperature has to be used
-  // with the internal reference of 1.1V.
-  // Channel 8 can not be selected with
-  // the analogRead function yet.
-
-  // Set the internal reference and mux.
-  ADMUX = (_BV(REFS1) | _BV(REFS0) | _BV(MUX3));
-  ADCSRA |= _BV(ADEN);  // enable the ADC
-
-  delay(20);            // wait for voltages to become stable.
-
-  ADCSRA |= _BV(ADSC);  // Start the ADC
-
-  // Detect end-of-conversion
-  while (bit_is_set(ADCSRA,ADSC));
-
-  // Reading register "ADCW" takes care of how to read ADCL and ADCH.
-  wADC = ADCW;
-
-  // The returned temperature is raw.
-  return (wADC);
-}
-
 void setup() {
   pinMode(7, OUTPUT);
   pinMode(6, OUTPUT);
@@ -579,7 +551,7 @@ void loop() {
     if (lat != oldLat && total_time != old_total_time ) {
       battV = analogRead(2);
       intTemp = getTemp();
-      n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, intTemp, navmode);
+      n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, navmode);
       n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
       radio1.write(0x07, 0x08); // turn tx on`
       rtty_txstring(superbuffer);
