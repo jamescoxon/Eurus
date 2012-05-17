@@ -238,6 +238,9 @@ void setupRadio(){
   
   //radio1.write(0x6D, 0x03);// turn tx low power 8db
   radio1.write(0x6D, 0x04);// turn tx low power 11db
+  //radio1.write(0x6D, 0x05);// turn tx low power 14db
+  //radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
+  //radio1.write(0x6D, 0x07);// turn tx low power 20db (100mW)
   
   radio1.write(0x07, 0x08); // turn tx on
   delay(1000);
@@ -588,6 +591,21 @@ void loop() {
     old_total_time = total_time;
   }
   
+  // Depend on longitude control power output
+  if (lon < -8) {
+    //Switch power levels
+    if (count % 2 == 0){
+      //Switch to 17dbm
+      radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
+    }
+    else {
+      //Switch to default 11dbm
+      radio1.write(0x6D, 0x04);// turn tx low power 11db
+    }
+  }
+  else {
+    radio1.write(0x6D, 0x04);// turn tx low power 11db
+  }
   
   if (count % 50 == 0){
     PSMgps(); //re do power saving setup, currently only sets to Eco as low power modes are unstable
