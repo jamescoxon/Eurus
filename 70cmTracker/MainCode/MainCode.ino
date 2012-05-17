@@ -601,6 +601,8 @@ void loop() {
     }
   }
   
-  delay(1000);
+  else{
+    delay(1000);
+  }
     
 }
