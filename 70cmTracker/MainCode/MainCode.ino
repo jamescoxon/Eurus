@@ -35,7 +35,7 @@ rfm22 radio1(6);
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
 unsigned long startGPS = 0;
-int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0, intTemp = 0, oldLat = 0, total_time = -1, old_total_time = -2;
+int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0, oldLat = 0, total_time = -1, old_total_time = -2;
 int navmode = 0;
 
 uint8_t buf[60]; //GPS receive buffer
