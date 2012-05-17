@@ -1,13 +1,15 @@
 /*
-* PicoAtlas - James Coxon jacoxon@googlemail.com
-* Experiemental pico payload based upon Arduino Mini Pro, RF22b and a Ublox GPS
-* Designed to be ultra lightweight, current hardware weighs 33g including batteries
-* and can be lifted with a single 92cm foil balloon. Designed to explore long duration
-* floats involving a degree of super-pressure.
+* Eurus 70cm Tracker (434.200Mhz) - James Coxon jacoxon@googlemail.com
+* Long duration, East to West, High Altitude balloon flight - based up on the code of PicoAtlas.
+* Components - Arduino328, UBlox 6 GPS (Falcom FSA-03), RFM22b Radio
+*
+* Continous Transmission of RTTY with occasional Slow-Hell. Variable power output, over UK will be at
+* 10mW output but out to sea will increase up to 100mW
+*
 * Transmits RTTY during the day and Slow-Hell at night. See http://ukhas.org.uk/projects:picoatlas
 * for more info.
 *
-* Latest code can be found: https://github.com/jamescoxon/PicoAtlas
+* Latest code can be found: https://github.com/jamescoxon/Eurus
 *
 * GPS Code from jonsowman and Joey flight computer CUSF
 * https://github.com/cuspaceflight/joey-m/tree/master/firmware
