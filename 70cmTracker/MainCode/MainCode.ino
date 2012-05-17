@@ -6,9 +6,6 @@
 * Continous Transmission of RTTY with occasional Slow-Hell. Variable power output, over UK will be at
 * 10mW output but out to sea will increase up to 100mW
 *
-* Transmits RTTY during the day and Slow-Hell at night. See http://ukhas.org.uk/projects:picoatlas
-* for more info.
-*
 * Latest code can be found: https://github.com/jamescoxon/Eurus
 *
 * GPS Code from jonsowman and Joey flight computer CUSF
