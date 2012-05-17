@@ -556,7 +556,8 @@ void setup() {
   digitalWrite(7, HIGH);
   Serial.begin(9600);
   delay(500);
-  gpsPower(0);
+  //gpsPower(0);
+  setupGPS();
   setupRadio();
   startGPS = millis();
 }
@@ -570,16 +571,16 @@ void loop() {
   {   
     gps_get_position();
     gps_get_time();
-    battV = analogRead(2);
-    intTemp = getTemp();
-    n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, intTemp, navmode);
-    n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
     
     //Occasionally the GPS doesn't properly respond with useful data, we need to try and filter
     // this out - here we look for a change in latitude (which should occur even at rest due to 
     // GPS drift and also we'll look for a change in time (total_time = hour+mins+secs to create
     // a relatively unique number).
     if (lat != oldLat && total_time != old_total_time ) {
+      battV = analogRead(2);
+      intTemp = getTemp();
+      n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, intTemp, navmode);
+      n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
       radio1.write(0x07, 0x08); // turn tx on`
       rtty_txstring(superbuffer);
       delay(1000);
