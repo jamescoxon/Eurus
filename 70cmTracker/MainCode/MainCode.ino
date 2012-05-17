@@ -550,7 +550,6 @@ void loop() {
     // a relatively unique number).
     if (lat != oldLat && total_time != old_total_time ) {
       battV = analogRead(2);
-      intTemp = getTemp();
       n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, navmode);
       n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
       radio1.write(0x07, 0x08); // turn tx on`
@@ -584,7 +583,7 @@ void loop() {
   // Check that we are in high altitude mode, if not setup the GPS module again.
   if (count % 10 == 0){
     checkNAV();
-    if (navmode !=6){
+    if (navmode != 6){
       setupGPS();
     }
   }
