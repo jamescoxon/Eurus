@@ -29,14 +29,14 @@
 #include <util/crc16.h>
 
 //Setup radio on SPI with NSEL on pin 6
-rfm22 radio1(6);
+rfm22 radio1(9);
 
 //Variables
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
 unsigned long startGPS = 0;
 int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0, oldLat = 0, total_time = -1, old_total_time = -2;
-int navmode = 0;
+int navmode = 0, radio_power = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -235,6 +235,7 @@ void setupRadio(){
   
   //radio1.write(0x6D, 0x03);// turn tx low power 8db
   radio1.write(0x6D, 0x04);// turn tx low power 11db
+  radio_power = 4;
   //radio1.write(0x6D, 0x05);// turn tx low power 14db
   //radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
   //radio1.write(0x6D, 0x07);// turn tx low power 20db (100mW)
@@ -282,6 +283,10 @@ void setupGPS() {
   // Check and set the navigation mode (Airborne, 1G)
   uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
   sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+  
+  delay(1000);
+  
+  checkNAV();
   
 }
 
@@ -515,7 +520,7 @@ boolean checkNAV(){
       bytePos++;
     }
     // Timeout if no valid response in 3 seconds
-    if (millis() - startTime > 3000) {
+    if (millis() - startTime > 1000) {
       navmode = 0;
       return false;
     }
@@ -524,7 +529,8 @@ boolean checkNAV(){
 
 void setup() {
   pinMode(7, OUTPUT);
-  pinMode(6, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(A3, OUTPUT); //LED
   digitalWrite(7, HIGH);
   Serial.begin(9600);
   delay(500);
@@ -548,48 +554,57 @@ void loop() {
     // this out - here we look for a change in latitude (which should occur even at rest due to 
     // GPS drift and also we'll look for a change in time (total_time = hour+mins+secs to create
     // a relatively unique number).
-    if (lat != oldLat && total_time != old_total_time ) {
       battV = analogRead(2);
-      n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, navmode);
+      n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, navmode, radio_power);
       n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
       radio1.write(0x07, 0x08); // turn tx on`
       rtty_txstring(superbuffer);
       delay(1000);
-    }
     oldLat = lat;
     old_total_time = total_time;
   }
+  else{
+    delay(250);
+    radio1.write(0x07, 0x08); //on
+    delay(500);
+    radio1.write(0x07, 0x01); //off
+    delay(250);
+  }
   
+  if (count % 2 == 0){
+    digitalWrite(A3, HIGH);
+  }
+  else{
+    digitalWrite(A3, LOW);
+  }
+  
+  /*
   // Depend on longitude control power output
-  if (lon < -8) {
+  //if (lon < -8) {
     //Switch power levels
-    if (count % 2 == 0){
+    if (count % 10 == 0){
       //Switch to 17dbm
       radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
+      radio_power = 6;
     }
     else {
       //Switch to default 11dbm
       radio1.write(0x6D, 0x04);// turn tx low power 11db
+      radio_power = 4;
     }
-  }
-  else {
-    radio1.write(0x6D, 0x04);// turn tx low power 11db
-  }
-  
-  if (count % 50 == 0){
-    PSMgps(); //re do power saving setup, currently only sets to Eco as low power modes are unstable
-  }
-    
+  //}
+  //else {
+  //  radio1.write(0x6D, 0x04);// turn tx low power 11db
+  //}
+*/
+
+
   // Check that we are in high altitude mode, if not setup the GPS module again.
-  if (count % 10 == 0){
+  if (count % 50 == 0){
     checkNAV();
     if (navmode != 6){
       setupGPS();
     }
-  }
-  
-  else{
-    delay(1000);
   }
     
 }
