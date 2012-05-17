@@ -39,6 +39,7 @@ int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
 unsigned long startGPS = 0;
 int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0, intTemp = 0, oldLat = 0, total_time = -1, old_total_time = -2;
+int navmode = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -278,6 +279,10 @@ void setupGPS() {
   Serial.println("$PUBX,40,VTG,0,0,0,0*5E");
   delay(3000); // Wait for the GPS to process all the previous commands
   
+  // Check and set the navigation mode (Airborne, 1G)
+  uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
+  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+  
 }
 
 void PSMgps(){
@@ -481,14 +486,40 @@ void gps_get_time()
     }
 }
 
-void prepData() {
-  gps_get_position();
-  gps_get_time();
-  count++;
-  battV = analogRead(2);
-  intTemp = getTemp();
-  n=sprintf (superbuffer, "$$PICO,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, intTemp);
-  n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
+//Function to poll the NAV5 status of a Ublox GPS module (5/6)
+//Sends a UBX command (requires the function sendUBX()) and waits 3 seconds
+// for a reply from the module. The then isolates the byte which contains 
+// the information regarding the NAV5 mode,
+// 0 = Pedestrian mode (default, will not work above 12km)
+// 6 = Airborne 1G (works up to 50km altitude)
+//Adapted by jcoxon from getUBX_ACK() from the example code on UKHAS wiki
+// http://wiki.ukhas.org.uk/guides:falcom_fsa03
+boolean checkNAV(){
+  uint8_t b, bytePos = 0;
+  uint8_t getNAV5[] = { 0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84 }; //Poll NAV5 status
+ 
+  Serial.flush();
+  unsigned long startTime = millis();
+  sendUBX(getNAV5, sizeof(getNAV5)/sizeof(uint8_t));
+ 
+  while (1) {
+    // Make sure data is available to read
+    if (Serial.available()) {
+      b = Serial.read();
+ 
+      if(bytePos == 8){
+        navmode = b;
+        return true;
+      }
+ 
+      bytePos++;
+    }
+    // Timeout if no valid response in 3 seconds
+    if (millis() - startTime > 3000) {
+      navmode = 0;
+      return false;
+    }
+  }
 }
 
 //From http://arduino.cc/playground/Main/InternalTemperatureSensor
@@ -531,73 +562,45 @@ void setup() {
 }
 
 void loop() {
+  count++;
   
-  radio1.write(0x07, 0x08); // turn tx on
-  delay(500);
-  if(gpsstatus == 1){
-    radio1.write(0x07, 0x01); // turn tx off
-    delay(250);
-    radio1.write(0x07, 0x08); // turn tx on
-    delay(500);
-  }
-  radio1.write(0x07, 0x01); // turn tx off
-  delay(10000);
+  gps_check_lock();
   
-  if(millis() - startGPS > 300000){
-    if(gpsstatus == 0){
-      gpsPower(1); //turn GPS on
-    }
-    else {
-      gps_check_lock();
-  
-      if( lock == 0x03 || lock == 0x04 )
-      {
-        gps_get_time();
-
-        //This is the daytime loop, operates between 0700 and 2000
-        // 2 situations will break out of this loop - either outside the time
-        // or that we've lost gps lock (though we give it 10 loops in an attempt
-        // to regain lock)
-        while(hour > 6 && hour < 20) {
-          gps_check_lock();
-          if (lock == 0x03 || lock == 0x04) {
-            lockcount = 0;
-          }
-          else {
-            lockcount++;
-            if (lockcount > 10){
-              lockcount = 0;
-              break;
-            }
-          }
-          
-          prepData();
-          //Occasionally the GPS doesn't properly respond with useful data, we need to try and filter
-          // this out - here we look for a change in latitude (which should occur even at rest due to 
-          // GPS drift and also we'll look for a change in time (total_time = hour+mins+secs to create
-          // a relatively unique number).
-          if (lat != oldLat && total_time != old_total_time ) {
-            radio1.write(0x07, 0x08); // turn tx on`
-            rtty_txstring(superbuffer);
-            delay(1000);
-          }
-          oldLat = lat;
-          old_total_time = total_time;
-          
-          if (count % 50 == 0){
-            PSMgps(); //re do power saving setup, currently only sets to Eco as low power modes are unstable
-          }
-        } //End of the daytime loop
-        
-        //This is the night time and default setup
-        gpsPower(0); //turn GPS off
-        prepData();
-        radio1.write(0x07, 0x08); // turn tx on
-        hellsendmsg(superbuffer);
-        startGPS = millis();
-      }
-    }
+  if( lock == 0x03 || lock == 0x04 )
+  {   
+    gps_get_position();
+    gps_get_time();
+    battV = analogRead(2);
+    intTemp = getTemp();
+    n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, battV, intTemp, navmode);
+    n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
     
+    //Occasionally the GPS doesn't properly respond with useful data, we need to try and filter
+    // this out - here we look for a change in latitude (which should occur even at rest due to 
+    // GPS drift and also we'll look for a change in time (total_time = hour+mins+secs to create
+    // a relatively unique number).
+    if (lat != oldLat && total_time != old_total_time ) {
+      radio1.write(0x07, 0x08); // turn tx on`
+      rtty_txstring(superbuffer);
+      delay(1000);
+    }
+    oldLat = lat;
+    old_total_time = total_time;
   }
+  
+  
+  if (count % 50 == 0){
+    PSMgps(); //re do power saving setup, currently only sets to Eco as low power modes are unstable
+  }
+    
+  // Check that we are in high altitude mode, if not setup the GPS module again.
+  if (count % 10 == 0){
+    checkNAV();
+    if (navmode !=6){
+      setupGPS();
+    }
+  }
+  
+  delay(1000);
     
 }
