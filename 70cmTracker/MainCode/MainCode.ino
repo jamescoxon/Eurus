@@ -35,7 +35,7 @@ rfm22 radio1(9);
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
 unsigned long startGPS = 0;
-int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0, oldLat = 0, total_time = -1, old_total_time = -2;
+int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0;
 int navmode = 0, radio_power = 0;
 
 uint8_t buf[60]; //GPS receive buffer
@@ -96,7 +96,7 @@ void rtty_txbit (int bit)
 		}
                 delayMicroseconds(19500); // 10000 = 100 BAUD 20150
 
-}
+}  
 
 // Send a byte array of UBX protocol to the GPS
 void sendUBX(uint8_t *MSG, uint8_t len) {
@@ -373,7 +373,6 @@ void gps_get_time()
         hour = buf[22];
         minute = buf[23];
         second = buf[24];
-        total_time = hour + minute + second;
       }
     }
 }
@@ -442,8 +441,7 @@ void loop() {
   radio1.write(0x07, 0x08); // turn tx on`
   rtty_txstring(superbuffer);
   delay(1000);
-  //oldLat = lat;
-  //old_total_time = total_time;
+
   
   if (count % 2 == 0){
     digitalWrite(A3, HIGH);
