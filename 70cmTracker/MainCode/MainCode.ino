@@ -451,22 +451,26 @@ void loop() {
   }
   
   /*
-  // Depend on longitude control power output
-  //if (lon < -8) {
-    //Switch power levels
+  //Depend on longitude control power output
+  //Switch power levels
+  if (lon <= -8){
     if (count % 10 == 0){
-      //Switch to 17dbm
-      radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
-      radio_power = 6;
+      if (radio_power == 4){
+        //Switch to 17dbm
+        radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
+        radio_power = 6;
+      }
+      else {
+        //Switch to default 11dbm
+        radio1.write(0x6D, 0x04);// turn tx low power 11db
+        radio_power = 4;
+      }
     }
-    else {
-      //Switch to default 11dbm
-      radio1.write(0x6D, 0x04);// turn tx low power 11db
-      radio_power = 4;
-    }
-  //}
-  //else {
-  //  radio1.write(0x6D, 0x04);// turn tx low power 11db
-  //}
+  }
+  else {
+    //Switch to default 11dbm
+    radio1.write(0x6D, 0x04);// turn tx low power 11db
+    radio_power = 4;
+  }
 */
 }
