@@ -407,6 +407,7 @@ uint8_t gps_check_nav(void)
 }
 
 void setup() {
+  analogReference(DEFAULT);
   pinMode(7, OUTPUT);
   pinMode(9, OUTPUT);
   pinMode(A3, OUTPUT); //LED
@@ -457,8 +458,8 @@ void loop() {
     if (count % 10 == 0){
       if (radio_power == 4){
         //Switch to 17dbm
-        radio1.write(0x6D, 0x06);// turn tx low power 17db (50mW)
-        radio_power = 6;
+        radio1.write(0x6D, 0x07);// turn tx low power 17db (50mW)
+        radio_power = 7;
       }
       else {
         //Switch to default 11dbm
