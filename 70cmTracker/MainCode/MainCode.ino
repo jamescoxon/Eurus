@@ -28,14 +28,14 @@
 #include <RFM22.h>
 #include <util/crc16.h>
 
-//Setup radio on SPI with NSEL on pin 6
+//Setup radio on SPI with NSEL on pin 9
 rfm22 radio1(9);
 
 //Variables
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
 unsigned long startGPS = 0;
-int GPSerror = 0, count = 0, n, gpsstatus, lockcount = 0, battV = 0;
+int GPSerror = 0, count = 1, n, gpsstatus, lockcount = 0, battV = 0;
 int navmode = 0, radio_power = 0;
 
 uint8_t buf[60]; //GPS receive buffer
@@ -450,10 +450,10 @@ void loop() {
     digitalWrite(A3, LOW);
   }
   
-  /*
+  
   //Depend on longitude control power output
   //Switch power levels
-  if (lon <= -8){
+  //if (lon <= -8){
     if (count % 10 == 0){
       if (radio_power == 4){
         //Switch to 17dbm
@@ -466,11 +466,11 @@ void loop() {
         radio_power = 4;
       }
     }
-  }
-  else {
+  //}
+  //else {
     //Switch to default 11dbm
-    radio1.write(0x6D, 0x04);// turn tx low power 11db
-    radio_power = 4;
-  }
-*/
+  //  radio1.write(0x6D, 0x04);// turn tx low power 11db
+  //  radio_power = 4;
+  //}
+
 }
