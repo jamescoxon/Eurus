@@ -455,10 +455,10 @@ void loop() {
   //Depend on longitude control power output
   //Switch power levels
   //if (lon <= -8){
-    if (count % 10 == 0){
+    if (count % 20 == 0){
       if (radio_power == 4){
         //Switch to 17dbm
-        radio1.write(0x6D, 0x07);// turn tx low power 17db (50mW)
+        radio1.write(0x6D, 0x07);// turn tx low power 20db (100mW)
         radio_power = 7;
       }
       else {
