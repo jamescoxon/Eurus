@@ -3,7 +3,7 @@
 * Long duration, East to West, High Altitude balloon flight - based up on the code of PicoAtlas.
 * Components - Arduino328, UBlox 6 GPS (Falcom FSA-03), RFM22b Radio
 *
-* Continous Transmission of RTTY with occasional Slow-Hell. Variable power output, over UK will be at
+* Continous Transmission of RTTY. Variable power output, over UK will be at
 * 10mW output but out to sea will increase up to 100mW
 *
 * Latest code can be found: https://github.com/jamescoxon/Eurus
@@ -472,6 +472,10 @@ void loop() {
       radio1.write(0x6D, 0x04);// turn tx low power 11db
       radio_power = 4;
     }
+  }
+  
+  if (count % 100 == 0){
+    setupGPS();
   }
 
 }
