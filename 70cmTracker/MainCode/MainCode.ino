@@ -132,8 +132,6 @@ void setupRadio(){
   //radio1.write(0x6D, 0x07);// turn tx low power 20db (100mW)
   
   radio1.write(0x07, 0x08); // turn tx on
-  delay(1000);
-  radio1.write(0x07, 0x01); // turn tx off
   
 }
 //************Other Functions*****************
@@ -409,9 +407,9 @@ uint8_t gps_check_nav(void)
 void setup() {
   analogReference(DEFAULT);
   pinMode(7, OUTPUT);
-  pinMode(9, OUTPUT);
+  digitalWrite(7, HIGH); // Turn off Radio
+  //pinMode(9, OUTPUT);
   pinMode(A3, OUTPUT); //LED
-  digitalWrite(7, HIGH);
   Serial.begin(9600);
   delay(500);
   //gpsPower(0);
@@ -439,7 +437,7 @@ void loop() {
   battV = analogRead(2);
   n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, battV, navmode, radio_power);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
-  radio1.write(0x07, 0x08); // turn tx on`
+  
   rtty_txstring(superbuffer);
   delay(1000);
 
@@ -454,7 +452,7 @@ void loop() {
   
   //Depend on longitude control power output
   //Switch power levels
-  //if (lon <= -8){
+  if (lon <= -6){
     if (count % 20 == 0){
       if (radio_power == 4){
         //Switch to 17dbm
@@ -467,11 +465,13 @@ void loop() {
         radio_power = 4;
       }
     }
-  //}
-  //else {
-    //Switch to default 11dbm
-  //  radio1.write(0x6D, 0x04);// turn tx low power 11db
-  //  radio_power = 4;
-  //}
+  }
+  else {
+    if(radio_power != 4){
+      //Switch to default 11dbm
+      radio1.write(0x6D, 0x04);// turn tx low power 11db
+      radio_power = 4;
+    }
+  }
 
 }
