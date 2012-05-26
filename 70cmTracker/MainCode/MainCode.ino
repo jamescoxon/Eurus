@@ -34,7 +34,6 @@ rfm22 radio1(9);
 //Variables
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
-unsigned long startGPS = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, lockcount = 0, battV = 0;
 int navmode = 0, radio_power = 0;
 
@@ -407,7 +406,7 @@ uint8_t gps_check_nav(void)
 void setup() {
   analogReference(DEFAULT);
   pinMode(7, OUTPUT);
-  digitalWrite(7, HIGH); // Turn off Radio
+  digitalWrite(7, LOW); // Turn off Radio
   //pinMode(9, OUTPUT);
   pinMode(A3, OUTPUT); //LED
   Serial.begin(9600);
@@ -415,7 +414,6 @@ void setup() {
   //gpsPower(0);
   setupGPS();
   setupRadio();
-  startGPS = millis();
 }
 
 void loop() {
