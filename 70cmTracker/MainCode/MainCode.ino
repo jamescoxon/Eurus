@@ -407,13 +407,14 @@ void setup() {
   analogReference(DEFAULT);
   pinMode(7, OUTPUT);
   digitalWrite(7, LOW); // Turn off Radio
+  setupRadio();
   //pinMode(9, OUTPUT);
   pinMode(A3, OUTPUT); //LED
   Serial.begin(9600);
-  delay(500);
+  delay(1000);
   //gpsPower(0);
   setupGPS();
-  setupRadio();
+  
 }
 
 void loop() {
@@ -450,7 +451,7 @@ void loop() {
   
   //Depend on longitude control power output
   //Switch power levels
-  if (lon <= -6){
+  if (lon <= -60000000){
     if (count % 20 == 0){
       if (radio_power == 4){
         //Switch to 17dbm
