@@ -1,4 +1,5 @@
 #include <Plan13.h>
+#include <Time.h>
 
 #define ONEPPM 1.0e-6
 #define DEBUG false
@@ -10,21 +11,25 @@ char * elements[1][3]={
              "2 25544 051.6413 237.9310 0010868 357.8450 061.6602 15.56427442774416"},
  };
 void setup () {
+  Serial.begin(38400);
+  setTime((1338129814+60)); 
+  
+  //setTime(hr,min,sec,day,month,yr);
   p13.setFrequency(145825000, 145825000);//AO-51  frequency
   p13.setLocation(51.2760, 1.0760, 20); // Sackville, NB
-Serial.begin(38400);
+  
 }
 void loop() { 
-  p13.setTime(2012, 05, 27, 13, 57, 0); //Oct 1, 2009 19:05:00 UTC
+  time_t t = now();
+  Serial.print(year(t)); Serial.print(month(t)); Serial.print(day(t)); Serial.print(hour(t));Serial.print(minute(t));Serial.println(second(t));
+  p13.setTime(year(t), month(t), day(t), hour(t), minute(t), second(t)); //Oct 1, 2009 19:05:00 UTC
 
   readElements(0);
   
   p13.calculate(); //crunch the numbers
   p13.printdata();
   Serial.println();
-  Serial.println("Should be:");
-  Serial.println("AZ:57.07 EL: 4.05 RX 435301728 TX 145919440");
- exit(1);
+  delay(1000);
 }
 
 double getElement(char *gstr, int gstart, int gstop)
