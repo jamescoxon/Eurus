@@ -1,0 +1,83 @@
+#include <Plan13.h>
+
+#define ONEPPM 1.0e-6
+#define DEBUG false
+Plan13 p13;
+
+char * elements[1][3]={
+             {"ISS (ZARYA)",
+             "1 25544U 98067A   12146.08237655  .00018542  00000-0  26305-3 0  6222",
+             "2 25544 051.6413 237.9310 0010868 357.8450 061.6602 15.56427442774416"},
+ };
+void setup () {
+  p13.setFrequency(145825000, 145825000);//AO-51  frequency
+  p13.setLocation(51.2760, 1.0760, 20); // Sackville, NB
+Serial.begin(38400);
+}
+void loop() { 
+  p13.setTime(2012, 05, 27, 13, 57, 0); //Oct 1, 2009 19:05:00 UTC
+
+  readElements(0);
+  
+  p13.calculate(); //crunch the numbers
+  p13.printdata();
+  Serial.println();
+  Serial.println("Should be:");
+  Serial.println("AZ:57.07 EL: 4.05 RX 435301728 TX 145919440");
+ exit(1);
+}
+
+double getElement(char *gstr, int gstart, int gstop)
+{
+  double retval;
+  int    k, glength;
+  char   gestr[80];
+
+  glength = gstop - gstart + 1;
+
+  for (k = 0; k <= glength; k++)
+  {
+     gestr[k] = gstr[gstart+k-1];
+  }
+
+  gestr[glength] = '\0';
+  retval = atof(gestr);
+  return(retval);
+}
+
+   void readElements(int x)//order in the array above
+{
+ // for example ...
+ // char line1[] = "1 28375U 04025K   09232.55636497 -.00000001  00000-0 12469-4 0   4653";
+ // char line2[] = "2 28375 098.0531 238.4104 0083652 290.6047 068.6188 14.40649734270229";
+
+        p13.setElements(getElement(elements[x][1],19,20) + 2000, getElement(elements[x][1],21,32), getElement(elements[x][2],9,16), 
+         getElement(elements[x][2],18,25), getElement(elements[x][2],27,33) * 1.0e-7, getElement(elements[x][2],35,42), getElement(elements[x][2],44,51), getElement(elements[x][2],53,63), 
+         getElement(elements[x][1],34,43), (getElement(elements[x][2],64,68) + ONEPPM), 0);
+  
+        if (DEBUG) {
+        Serial.print("RV: ");
+        Serial.println( p13.RV);
+        Serial.print("YE: ");
+        Serial.println(p13.YE);
+        Serial.print("TE: ");
+        Serial.println(p13.TE);
+        Serial.print("IN: ");
+        Serial.println(p13.IN);
+        Serial.print("RA: ");
+        Serial.println(p13.RA);
+        Serial.print("EC: ");
+        Serial.println(p13.EC);
+        Serial.print("WP: ");
+        Serial.println(p13.WP);
+        Serial.print("MA: ");
+        Serial.println(p13.MA);
+        Serial.print("MM: ");
+        Serial.println(p13.MM);
+        Serial.print("M2: ");
+        Serial.println(p13.M2);
+        Serial.println();
+        } 
+ }
+
+
