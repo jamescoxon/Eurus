@@ -1,22 +1,5 @@
-
-/* Project Swift - High altitude balloon flight software                 */
-/*=======================================================================*/
-/* Copyright 2010-2012 Philip Heron <phil@sanslogic.co.uk>               */
-/*                     Nigel Smart <nigel@projectswift.co.uk>            */
-/*                                                                       */
-/* This program is free software: you can redistribute it and/or modify  */
-/* it under the terms of the GNU General Public License as published by  */
-/* the Free Software Foundation, either version 3 of the License, or     */
-/* (at your option) any later version.                                   */
-/*                                                                       */
-/* This program is distributed in the hope that it will be useful,       */
-/* but WITHOUT ANY WARRANTY; without even the implied warranty of        */
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         */
-/* GNU General Public License for more details.                          */
-/*                                                                       */
-/* You should have received a copy of the GNU General Public License     */
-/* along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
+#include <Plan13.h>
+#include <Time.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/crc16.h>
@@ -25,12 +8,9 @@
 #include <stdarg.h>
 #include "ax25modem.h"
 
-static const uint8_t const _sine_table[] = {
+static const uint8_t _sine_table[] = {
 #include "sine_table.h"
 };
-
-#define TXPIN    (1 << 7) /* PD7 */
-#define TXENABLE (1 << 4) /* PA4 */
 
 #define BAUD_RATE      (1200)
 #define TABLE_SIZE     (512)
@@ -46,6 +26,120 @@ static const uint8_t const _sine_table[] = {
 /* Data to be transmitted */
 volatile static uint8_t *_txbuf = 0;
 volatile static uint8_t  _txlen = 0;
+
+#define ONEPPM 1.0e-6
+#define DEBUG false
+Plan13 p13;
+
+char * elements[1][3]={
+             {"ISS (ZARYA)",
+             "1 25544U 98067A   12146.08237655  .00018542  00000-0  26305-3 0  6222",
+             "2 25544 051.6413 237.9310 0010868 357.8450 061.6602 15.56427442774416"}
+ };
+ 
+int32_t lat = 51276500, lon = 10640, alt = 0;
+ 
+void setup () {
+  Serial.begin(38400);
+  setTime((1338197011+60)); 
+  
+  //setTime(hr,min,sec,day,month,yr);
+  p13.setFrequency(145825000, 145825000);//ISS frequency
+  p13.setLocation(51.2760, 1.0760, 20); // Canterbury
+  
+  pinMode(5, OUTPUT);
+  digitalWrite(5, LOW);
+  ax25_init();
+  
+}
+void loop() { 
+  lat = 5127650;
+  lon = 10640;
+  time_t t = now();
+  Serial.print(year(t)); Serial.print(month(t)); Serial.print(day(t)); Serial.print(hour(t));Serial.print(minute(t));Serial.println(second(t));
+  p13.setTime(year(t), month(t), day(t), hour(t), minute(t), second(t)); //Oct 1, 2009 19:05:00 UTC
+
+  //ISS
+  readElements(0);
+  p13.calculate(); //crunch the numbers
+  p13.printdata();
+  Serial.println();
+  
+  Serial.print("Sending APRS");
+  digitalWrite(5, HIGH);
+  delay(1000);
+  tx_aprs();
+  delay(1000);
+  digitalWrite(5, LOW);
+  Serial.println(" Done");
+  delay(60000);
+}
+
+double getElement(char *gstr, int gstart, int gstop)
+{
+  double retval;
+  int    k, glength;
+  char   gestr[80];
+
+  glength = gstop - gstart + 1;
+
+  for (k = 0; k <= glength; k++)
+  {
+     gestr[k] = gstr[gstart+k-1];
+  }
+
+  gestr[glength] = '\0';
+  retval = atof(gestr);
+  return(retval);
+}
+
+   void readElements(int x)//order in the array above
+{
+ // for example ...
+ // char line1[] = "1 28375U 04025K   09232.55636497 -.00000001  00000-0 12469-4 0   4653";
+ // char line2[] = "2 28375 098.0531 238.4104 0083652 290.6047 068.6188 14.40649734270229";
+
+        p13.setElements(getElement(elements[x][1],19,20) + 2000, getElement(elements[x][1],21,32), getElement(elements[x][2],9,16), 
+         getElement(elements[x][2],18,25), getElement(elements[x][2],27,33) * 1.0e-7, getElement(elements[x][2],35,42), getElement(elements[x][2],44,51), getElement(elements[x][2],53,63), 
+         getElement(elements[x][1],34,43), (getElement(elements[x][2],64,68) + ONEPPM), 0); 
+ }
+ 
+ void tx_aprs()
+{
+	char slat[5];
+	char slng[5];
+	char stlm[9];
+	static uint16_t seq = 0;
+	
+	/* Convert the UBLOX-style coordinates to
+	 * the APRS compressed format */
+	lat = 900000000 - lat;
+	lat = lat / 26 - lat / 2710 + lat / 15384615;
+        Serial.print(lat);
+	Serial.print(" ");
+	lon = 900000000 + lon / 2;
+	lon = lon / 26 - lon / 2710 + lon / 15384615;
+        Serial.println(lon);
+	
+	alt = alt / 1000 * 32808 / 10000;
+	
+	/* Construct the compressed telemetry format */
+	ax25_base91enc(stlm + 0, 2, seq);
+	
+	ax25_frame(
+		APRS_CALLSIGN, APRS_SSID,
+		"APRS", 0,
+		0, 0, 0, 0,
+		//"WIDE1", 1,
+		//"WIDE2", 1,
+		"!/%s%sO   /A=%06ld|%s|",
+		ax25_base91enc(slat, 4, lat),
+		ax25_base91enc(slng, 4, lon),
+		alt, stlm
+	);
+	
+	seq++;
+}
 
 ISR(TIMER2_OVF_vect)
 {
@@ -135,7 +229,7 @@ void ax25_init(void)
 	
 	/* Enable pins for output (Port A pin 4 and Port D pin 7) */
 	//DDRA |= TXENABLE;
-	DDRD |= TXPIN;
+	pinMode(11, OUTPUT);
 }
 
 static uint8_t *_ax25_callsign(uint8_t *s, char *callsign, char ssid)

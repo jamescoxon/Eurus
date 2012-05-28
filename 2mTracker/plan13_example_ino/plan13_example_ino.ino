@@ -1,5 +1,6 @@
 #include <Plan13.h>
 #include <Time.h>
+#include "ax25modem.h"
 
 #define ONEPPM 1.0e-6
 #define DEBUG false
@@ -28,12 +29,19 @@ void loop() {
   Serial.print(year(t)); Serial.print(month(t)); Serial.print(day(t)); Serial.print(hour(t));Serial.print(minute(t));Serial.println(second(t));
   p13.setTime(year(t), month(t), day(t), hour(t), minute(t), second(t)); //Oct 1, 2009 19:05:00 UTC
 
+  //ISS
   readElements(0);
-  
   p13.calculate(); //crunch the numbers
   p13.printdata();
   Serial.println();
-  delay(1000);
+  
+  //PCSAT
+  readElements(1);
+  p13.calculate(); //crunch the numbers
+  p13.printdata();
+  Serial.println();
+  
+  delay(10000);
 }
 
 double getElement(char *gstr, int gstart, int gstop)
@@ -64,5 +72,63 @@ double getElement(char *gstr, int gstart, int gstop)
          getElement(elements[x][2],18,25), getElement(elements[x][2],27,33) * 1.0e-7, getElement(elements[x][2],35,42), getElement(elements[x][2],44,51), getElement(elements[x][2],53,63), 
          getElement(elements[x][1],34,43), (getElement(elements[x][2],64,68) + ONEPPM), 0); 
  }
+ 
+ void tx_aprs(int32_t lat, int32_t lon, int32_t alt)
+{
+	char slat[5];
+	char slng[5];
+	char stlm[9];
+	static uint16_t seq = 0;
+	
+	/* Convert the UBLOX-style coordinates to
+	 * the APRS compressed format */
+	lat = 900000000 - lat;
+	lat = lat / 26 - lat / 2710 + lat / 15384615;
+	
+	lon = 900000000 + lon / 2;
+	lon = lon / 26 - lon / 2710 + lon / 15384615;
+	
+	alt = alt / 1000 * 32808 / 10000;
+	
+	/* Construct the compressed telemetry format */
+	ax25_base91enc(stlm + 0, 2, seq);
+	
+	ax25_frame(
+		APRS_CALLSIGN, APRS_SSID,
+		"APRS", 0,
+		0, 0, 0, 0,
+		//"WIDE1", 1,
+		//"WIDE2", 1,
+		"!/%s%sO   /A=%06ld|%s|",
+		ax25_base91enc(slat, 4, lat),
+		ax25_base91enc(slng, 4, lon),
+		alt, stlm
+	);
+	
+	if(seq % 60 == 0)
+	{
+		char s[10];
+		
+		/* Make up the callsign */
+		strncpy_P(s, PSTR(APRS_CALLSIGN), 7);
+		if(APRS_SSID) snprintf(s + strlen(s), 4, "-%i", APRS_SSID);
+		
+		/* Transmit telemetry definitions */
+		ax25_frame(
+			APRS_CALLSIGN, APRS_SSID,
+			"APRS", 0,
+			0, 0, 0, 0,
+			":%-9s:PARM.Battery", s
+		);
+		ax25_frame(
+			APRS_CALLSIGN, APRS_SSID,
+			"APRS", 0,
+			0, 0, 0, 0,
+			":%-9s:UNIT.mV", s
+		);
+	}
+	
+	seq++;
+}
 
 
