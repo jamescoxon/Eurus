@@ -15,8 +15,8 @@ void setup () {
   setTime((1338129814+60)); 
   
   //setTime(hr,min,sec,day,month,yr);
-  p13.setFrequency(145825000, 145825000);//AO-51  frequency
-  p13.setLocation(51.2760, 1.0760, 20); // Sackville, NB
+  p13.setFrequency(145825000, 145825000);//ISS frequency
+  p13.setLocation(51.2760, 1.0760, 20); // Canterbury
   
 }
 void loop() { 
@@ -58,31 +58,7 @@ double getElement(char *gstr, int gstart, int gstop)
 
         p13.setElements(getElement(elements[x][1],19,20) + 2000, getElement(elements[x][1],21,32), getElement(elements[x][2],9,16), 
          getElement(elements[x][2],18,25), getElement(elements[x][2],27,33) * 1.0e-7, getElement(elements[x][2],35,42), getElement(elements[x][2],44,51), getElement(elements[x][2],53,63), 
-         getElement(elements[x][1],34,43), (getElement(elements[x][2],64,68) + ONEPPM), 0);
-  
-        if (DEBUG) {
-        Serial.print("RV: ");
-        Serial.println( p13.RV);
-        Serial.print("YE: ");
-        Serial.println(p13.YE);
-        Serial.print("TE: ");
-        Serial.println(p13.TE);
-        Serial.print("IN: ");
-        Serial.println(p13.IN);
-        Serial.print("RA: ");
-        Serial.println(p13.RA);
-        Serial.print("EC: ");
-        Serial.println(p13.EC);
-        Serial.print("WP: ");
-        Serial.println(p13.WP);
-        Serial.print("MA: ");
-        Serial.println(p13.MA);
-        Serial.print("MM: ");
-        Serial.println(p13.MM);
-        Serial.print("M2: ");
-        Serial.println(p13.M2);
-        Serial.println();
-        } 
+         getElement(elements[x][1],34,43), (getElement(elements[x][2],64,68) + ONEPPM), 0); 
  }
 
 
