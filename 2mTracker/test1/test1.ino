@@ -42,11 +42,11 @@ double elevation;
  
 void setup () {
   Serial.begin(38400);
-  setTime((1338273957+60)); 
+  setTime((1338278330+30)); 
   
   //setTime(hr,min,sec,day,month,yr);
   p13.setFrequency(145825000, 145825000);//ISS frequency
-  p13.setLocation(1.0760, 51.2760, 20); // Canterbury THIS NEEDS TO BE LON, LAT
+  p13.setLocation(1.0760, 51.2760, 33000); // Canterbury THIS NEEDS TO BE LON, LAT
   
   pinMode(5, OUTPUT);
   digitalWrite(5, LOW);
