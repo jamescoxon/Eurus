@@ -27,6 +27,25 @@
 #include <RFM22.h>
 #include <util/crc16.h>
 
+#include <Plan13.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+#define ONEPPM 1.0e-6
+#define DEBUG false
+Plan13 p13;
+
+char * elements[1][3] ={
+             {"ISS (ZARYA)",
+             "1 25544U 98067A   12146.08237655  .00018542  00000-0  26305-3 0  6222",
+             "2 25544 051.6413 237.9310 0010868 357.8450 061.6602 15.56427442774416"}
+ };
+
+int elevation = 0, azimuth = 0;
+
 //Setup radio on SPI with NSEL on pin 10
 rfm22 radio1(10);
 
@@ -123,6 +142,7 @@ void setupRadio(){
   radio1.write(0x6D, 0x04);// turn tx low power 11db
   
   radio1.write(0x07, 0x08); // turn tx on
+  rtty_txstring("TEST");
   
 }
 //************Other Functions*****************
@@ -381,6 +401,35 @@ uint8_t gps_check_nav(void)
     navmode = buf[8];
 }
 
+double getElement(char *gstr, int gstart, int gstop)
+{
+  double retval;
+  int    k, glength;
+  char   gestr[80];
+
+  glength = gstop - gstart + 1;
+
+  for (k = 0; k <= glength; k++)
+  {
+     gestr[k] = gstr[gstart+k-1];
+  }
+
+  gestr[glength] = '\0';
+  retval = atof(gestr);
+  return(retval);
+}
+
+   void readElements(int x)//order in the array above
+{
+ // for example ...
+ // char line1[] = "1 28375U 04025K   09232.55636497 -.00000001  00000-0 12469-4 0   4653";
+ // char line2[] = "2 28375 098.0531 238.4104 0083652 290.6047 068.6188 14.40649734270229";
+
+        p13.setElements(getElement(elements[x][1],19,20) + 2000, getElement(elements[x][1],21,32), getElement(elements[x][2],9,16), 
+         getElement(elements[x][2],18,25), getElement(elements[x][2],27,33) * 1.0e-7, getElement(elements[x][2],35,42), getElement(elements[x][2],44,51), getElement(elements[x][2],53,63), 
+         getElement(elements[x][1],34,43), (getElement(elements[x][2],64,68) + ONEPPM), 0); 
+ }
+
 void setup() {
   analogReference(DEFAULT);
   pinMode(A3, OUTPUT); //Radio SDN
@@ -405,7 +454,21 @@ void loop() {
   gps_get_position();
   gps_get_time();
 
-  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode);
+  if ((lock == 3) && (count % 10 == 0)){
+    //First setup plan13 stuff
+    p13.setFrequency(145825000, 145825000);//ISS frequency
+    p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); // Canterbury THIS NEEDS TO BE LON, LAT
+    //p13.setLocation(1.0760, 51.2760, 20); // Canterbury THIS NEEDS TO BE LON, LAT
+    p13.setTime(2012, 5, 29, hour, minute, second);
+    
+    //ISS
+    readElements(0);
+    p13.calculate(); //crunch the numbers
+    elevation = (int)p13.getElevation();
+    azimuth = (int)p13.getAz();
+  }
+  
+  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
   
   rtty_txstring(superbuffer);
