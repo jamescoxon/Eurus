@@ -37,24 +37,28 @@ char * elements[1][3]={
              "2 25544 051.6413 237.9310 0010868 357.8450 061.6602 15.56427442774416"}
  };
  
-int32_t lat = 51276500, lon = 10640, alt = 0;
+int32_t lat = 512765000, lon = 10640000, alt = 20000;
+double elevation;
  
 void setup () {
   Serial.begin(38400);
-  setTime((1338197011+60)); 
+  setTime((1338273957+60)); 
   
   //setTime(hr,min,sec,day,month,yr);
   p13.setFrequency(145825000, 145825000);//ISS frequency
-  p13.setLocation(51.2760, 1.0760, 20); // Canterbury
+  p13.setLocation(1.0760, 51.2760, 20); // Canterbury THIS NEEDS TO BE LON, LAT
   
   pinMode(5, OUTPUT);
   digitalWrite(5, LOW);
   ax25_init();
+  delay(5000);
+  send_APRS();
   
 }
 void loop() { 
-  lat = 5127650;
-  lon = 10640;
+  lat = 512765000;
+  lon = 10640000;
+  alt = 20000;
   time_t t = now();
   Serial.print(year(t)); Serial.print(month(t)); Serial.print(day(t)); Serial.print(hour(t));Serial.print(minute(t));Serial.println(second(t));
   p13.setTime(year(t), month(t), day(t), hour(t), minute(t), second(t)); //Oct 1, 2009 19:05:00 UTC
@@ -64,15 +68,26 @@ void loop() {
   p13.calculate(); //crunch the numbers
   p13.printdata();
   Serial.println();
-  
-  Serial.print("Sending APRS");
-  digitalWrite(5, HIGH);
-  delay(1000);
-  tx_aprs();
-  delay(1000);
-  digitalWrite(5, LOW);
-  Serial.println(" Done");
+  elevation = p13.getElevation();
+  Serial.print("El: ");
+  Serial.println(elevation);
+  if (elevation >= 10){
+    send_APRS();
+  }
+  else{
+    Serial.println("Not in view");
+  }
   delay(60000);
+}
+
+void send_APRS() {
+    Serial.print("Sending APRS");
+    digitalWrite(5, HIGH);
+    delay(1000);
+    tx_aprs();
+    delay(1000);
+    digitalWrite(5, LOW);
+    Serial.println(" Done");
 }
 
 double getElement(char *gstr, int gstart, int gstop)
@@ -128,9 +143,9 @@ double getElement(char *gstr, int gstart, int gstop)
 	
 	ax25_frame(
 		APRS_CALLSIGN, APRS_SSID,
-		"APRS", 0,
-		0, 0, 0, 0,
-		//"WIDE1", 1,
+		"ARISS", 0,
+		//0, 0, 0, 0,
+                "WIDE1", 1, 0,0,
 		//"WIDE2", 1,
 		"!/%s%sO   /A=%06ld|%s|",
 		ax25_base91enc(slat, 4, lat),
