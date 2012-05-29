@@ -40,18 +40,18 @@ Plan13 p13;
 
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   12146.08237655  .00018542  00000-0  26305-3 0  6222",
-             "2 25544 051.6413 237.9310 0010868 357.8450 061.6602 15.56427442774416"}
+             "1 25544U 98067A   12150.39347823  .00002801  00000-0  46454-4 0  6500",
+             "2 25544 051.6377 216.3774 0010561 004.9225 100.7168 15.55983709775088"}
  };
 
-int elevation = 0, azimuth = 0;
+int elevation = 0, azimuth = 0, aprs_status = 0;
 
 //Setup radio on SPI with NSEL on pin 10
 rfm22 radio1(10);
 
 //Variables
 int32_t lat = 0, lon = 0, alt = 0;
-uint8_t hour = 0, minute = 0, second = 0, lock = 0, sats = 0;
+uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0;
 
 uint8_t buf[60]; //GPS receive buffer
@@ -365,6 +365,8 @@ void gps_get_time()
         GPSerror = 34;
       }
       else {
+        month = buf[20];
+        day = buf[21];
         hour = buf[22];
         minute = buf[23];
         second = buf[24];
@@ -458,17 +460,24 @@ void loop() {
     //First setup plan13 stuff
     p13.setFrequency(145825000, 145825000);//ISS frequency
     p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); // Canterbury THIS NEEDS TO BE LON, LAT
-    //p13.setLocation(1.0760, 51.2760, 20); // Canterbury THIS NEEDS TO BE LON, LAT
-    p13.setTime(2012, 5, 29, hour, minute, second);
+    p13.setTime(2012, month, day, hour, minute, second);
     
     //ISS
     readElements(0);
     p13.calculate(); //crunch the numbers
     elevation = (int)p13.getElevation();
     azimuth = (int)p13.getAz();
+    
+    if (elevation >= 5){
+      aprs_status = 1;
+      //Transmit APRS data now
+    }
+    else {
+      aprs_status = 0;
+    }
   }
   
-  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth);
+  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth, aprs_status);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
   
   rtty_txstring(superbuffer);
