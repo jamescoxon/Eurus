@@ -44,8 +44,6 @@ char * elements[1][3] ={
              "2 25544 051.6377 216.3774 0010561 004.9225 100.7168 15.55983709775088"}
  };
 
-int elevation = 0, azimuth = 0, aprs_status = 0;
-
 //Setup radio on SPI with NSEL on pin 10
 rfm22 radio1(10);
 
@@ -53,6 +51,7 @@ rfm22 radio1(10);
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0;
+int elevation = 0, azimuth = 0, aprs_status = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -180,7 +179,7 @@ void setupGPS() {
   
   //set GPS to Eco mode (reduces current by 4mA)
   uint8_t setEco[] = {0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x00, 0x04, 0x1D, 0x85};
-   sendUBX(setEco, sizeof(setEco)/sizeof(uint8_t));
+  sendUBX(setEco, sizeof(setEco)/sizeof(uint8_t));
   
 }
 
@@ -407,7 +406,7 @@ double getElement(char *gstr, int gstart, int gstop)
   return(retval);
 }
 
-   void readElements(int x)//order in the array above
+void readElements(int x)//order in the array above
 {
  // for example ...
  // char line1[] = "1 28375U 04025K   09232.55636497 -.00000001  00000-0 12469-4 0   4653";
@@ -445,7 +444,7 @@ void loop() {
   if ((lock == 3) && (count % 10 == 0)){
     //First setup plan13 stuff
     p13.setFrequency(145825000, 145825000);//ISS frequency
-    p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); // Canterbury THIS NEEDS TO BE LON, LAT
+    p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); //THIS NEEDS TO BE LON, LAT
     p13.setTime(2012, month, day, hour, minute, second);
     
     //ISS
