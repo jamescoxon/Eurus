@@ -468,7 +468,7 @@ void loop() {
   
   rtty_txstring(superbuffer);
   
-  if (count % 100 == 0){
+  if (count % 25 == 0){
     
     //Send commands to GPS
     setupGPS();
