@@ -166,24 +166,10 @@ uint16_t gps_CRC16_checksum (char *string)
 }
 
 void setupGPS() {
-  //Turning off all GPS NMEA strings apart on the uBlox module
-    //Turning off all GPS NMEA strings apart on the uBlox module
-  Serial.println("$PUBX,40,GLL,0,0,0,0*5C");
-  delay(1000);
-  Serial.println("$PUBX,40,GGA,0,0,0,0*5A");
-  delay(1000);
-  Serial.println("$PUBX,40,GSA,0,0,0,0*4E");
-  delay(1000);
-  Serial.println("$PUBX,40,RMC,0,0,0,0*47");
-  delay(1000);
-  Serial.println("$PUBX,40,GSV,0,0,0,0*59");
-  delay(1000);
-  Serial.println("$PUBX,40,VTG,0,0,0,0*5E");
-  delay(3000); // Wait for the GPS to process all the previous commands
   
   // Taken from Project Swift (rather than the old way of sending ascii text)
-  //uint8_t setNMEAoff[] = {0x01, 0x00, 0x00, 0x00, 0xC0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00};
-  //sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
+  uint8_t setNMEAoff[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9};
+  sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
   
   delay(500);
   // Check and set the navigation mode (Airborne, 1G)
