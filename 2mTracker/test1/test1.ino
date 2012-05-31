@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "ax25modem.h"
+#include <avr/pgmspace.h>    // needed for PROGMEMs
 
-static const uint8_t _sine_table[] = {
+static const uint8_t PROGMEM _sine_table[] = {
 #include "sine_table.h"
 };
 
@@ -71,13 +72,13 @@ void loop() {
   elevation = p13.getElevation();
   Serial.print("El: ");
   Serial.println(elevation);
-  if (elevation >= 10){
+  //if (elevation >= 10){
     send_APRS();
-  }
-  else{
-    Serial.println("Not in view");
-  }
-  delay(60000);
+  //}
+  //else{
+  //  Serial.println("Not in view");
+  //}
+  delay(10000);
 }
 
 void send_APRS() {
@@ -167,7 +168,7 @@ ISR(TIMER2_OVF_vect)
 	static int8_t bc       = 0;
 	
 	/* Update the PWM output */
-	OCR2A = _sine_table[(phase >> 7) & 0x1FF];
+	OCR2A = pgm_read_byte(_sine_table[(phase >> 7) & 0x1FF]);
 	phase += step;
 	
 	if(++sample < SAMPLES_PER_BAUD) return;

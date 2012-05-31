@@ -122,13 +122,13 @@ void rtty_txbit (int bit)
 {
 		if (bit)
 		{
-		  // high (using Navrac's version)
-                  radio1.write(0x073, 0x00);
+  		  // low (using Navrac's version)
+                  radio1.write(0x073, 0x03);
 		}
 		else
 		{
-		  // low (using Navrac's version)
-                  radio1.write(0x073, 0x03);
+		  // high (using Navrac's version)
+                  radio1.write(0x073, 0x00);
 		}
                 delayMicroseconds(19500); // 10000 = 100 BAUD 20150
 
@@ -162,7 +162,6 @@ void setupRadio(){
   radio1.write(0x6D, 0x04);// turn tx low power 11db
   
   radio1.write(0x07, 0x08); // turn tx on
-  rtty_txstring("TEST");
   
 }
 //************Other Functions*****************
@@ -638,6 +637,8 @@ char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
 }
 
 void send_APRS() {
+    ax25_init();
+    delay(5000);
     //Serial.print("Sending APRS");
     digitalWrite(5, HIGH);
     delay(1000);
@@ -645,6 +646,7 @@ void send_APRS() {
     delay(1000);
     digitalWrite(5, LOW);
     //Serial.println(" Done");
+    setupRadio();
 }
 
 void setup() {
@@ -656,9 +658,6 @@ void setup() {
   
   delay(1000);
   setupGPS();
-  ax25_init();
-  delay(5000);
-  send_APRS();
   //Serial.print("Finished Setup");
   
 }
@@ -676,7 +675,7 @@ void loop() {
   gps_get_position();
   gps_get_time();
 
-  if ((lock == 3) && (count % 10 == 0)){
+  if ((lock == 3) && (count % 2 == 0)){
     //First setup plan13 stuff
     p13.setFrequency(145825000, 145825000);//ISS frequency
     p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); //THIS NEEDS TO BE LON, LAT
@@ -699,12 +698,14 @@ void loop() {
     }
   }
   
+  send_APRS();
+  
   n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth, aprs_status, aprs_attempts);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
   
   rtty_txstring(superbuffer);
   
-  if (count % 25 == 0){
+  if (count % 50 == 0){
     
     //Send commands to GPS
     setupGPS();
