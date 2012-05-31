@@ -147,7 +147,7 @@ void setupRadio(){
   
   delay(1000);
   
-  rfm22::initSPI();
+  radio1.initSPI();
 
   radio1.init();
   
@@ -486,7 +486,7 @@ ISR(TIMER2_OVF_vect)
 	static int8_t bc       = 0;
 	
 	/* Update the PWM output */
-	OCR2A = pgm_read_byte(_sine_table[(phase >> 7) & 0x1FF]);
+	OCR2A = pgm_read_byte(&_sine_table[(phase >> 7) & 0x1FF]);
 	phase += step;
 	
 	if(++sample < SAMPLES_PER_BAUD) return;
@@ -637,15 +637,15 @@ char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
 }
 
 void send_APRS() {
-    ax25_init();
+    SPI.end();
+    //digitalWrite(A3, HIGH);
     delay(5000);
-    //Serial.print("Sending APRS");
-    digitalWrite(5, HIGH);
+    ax25_init();
+
     delay(1000);
     tx_aprs();
     delay(1000);
-    digitalWrite(5, LOW);
-    //Serial.println(" Done");
+    pinMode(11, INPUT);
     setupRadio();
 }
 
@@ -697,8 +697,6 @@ void loop() {
       aprs_status = 0;
     }
   }
-  
-  send_APRS();
   
   n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth, aprs_status, aprs_attempts);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
