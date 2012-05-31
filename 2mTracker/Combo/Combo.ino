@@ -72,7 +72,7 @@ rfm22 radio1(10);
 int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0;
-int elevation = 0, azimuth = 0, aprs_status = 0;
+int elevation = 0, azimuth = 0, aprs_status = 0, aprs_attempts = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -692,13 +692,14 @@ void loop() {
       aprs_status = 1;
       //Transmit APRS data now
       send_APRS();
+      aprs_attempts++;
     }
     else {
       aprs_status = 0;
     }
   }
   
-  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth, aprs_status);
+  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, elevation, azimuth, aprs_status, aprs_attempts);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
   
   rtty_txstring(superbuffer);
