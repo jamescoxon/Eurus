@@ -168,7 +168,7 @@ ISR(TIMER2_OVF_vect)
 	static int8_t bc       = 0;
 	
 	/* Update the PWM output */
-	OCR2A = pgm_read_byte(_sine_table[(phase >> 7) & 0x1FF]);
+	OCR2A = pgm_read_byte(&_sine_table[(phase >> 7) & 0x1FF]);
 	phase += step;
 	
 	if(++sample < SAMPLES_PER_BAUD) return;
