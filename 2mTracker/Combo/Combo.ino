@@ -682,7 +682,7 @@ void loop() {
 
   if ((lock == 3) && (count % 2 == 0)){
     //First setup plan13 stuff
-    p13.setFrequency(145825000, 145825000);//ISS frequency
+    p13.setFrequency(437550000, 437550000);//ISS 70cm beacon frequency
     p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); //THIS NEEDS TO BE LON, LAT
     p13.setTime(2012, month, day, hour, minute, second);
     
