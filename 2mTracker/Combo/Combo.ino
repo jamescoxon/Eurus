@@ -61,8 +61,8 @@ Plan13 p13;
 
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   12150.39347823  .00002801  00000-0  46454-4 0  6500",
-             "2 25544 051.6377 216.3774 0010561 004.9225 100.7168 15.55983709775088"}
+             "1 25544U 98067A   12157.96657841  .00011635  00000-0  16950-3 0  6966",
+             "2 25544 051.6374 178.5089 0010395 035.6035 041.5946 15.56157757776262"}
  };
 
 //Setup radio on SPI with NSEL on pin 10
@@ -444,31 +444,32 @@ void readElements(int x)//order in the array above
 	char slng[5];
 	char stlm[9];
 	static uint16_t seq = 0;
+        double aprs_lat, aprs_lon;
 	
 	/* Convert the UBLOX-style coordinates to
 	 * the APRS compressed format */
-	lat = 900000000 - lat;
-	lat = lat / 26 - lat / 2710 + lat / 15384615;
-        Serial.print(lat);
+	aprs_lat = 900000000 - lat;
+	aprs_lat = aprs_lat / 26 - aprs_lat / 2710 + aprs_lat / 15384615;
+        Serial.print(aprs_lat);
 	Serial.print(" ");
-	lon = 900000000 + lon / 2;
-	lon = lon / 26 - lon / 2710 + lon / 15384615;
-        Serial.println(lon);
+	aprs_lon = 900000000 + lon / 2;
+	aprs_lon = aprs_lon / 26 - aprs_lon / 2710 + aprs_lon / 15384615;
+        Serial.println(aprs_lon);
 	
-	alt = alt / 1000 * 32808 / 10000;
+	alt = alt * 32808 / 10000;
 	
 	/* Construct the compressed telemetry format */
 	ax25_base91enc(stlm + 0, 2, seq);
 	
 	ax25_frame(
 		APRS_CALLSIGN, APRS_SSID,
-		"ARISS", 0,
+		"APRS", 0,
 		//0, 0, 0, 0,
                 "WIDE1", 1, 0,0,
 		//"WIDE2", 1,
 		"!/%s%sO   /A=%06ld|%s|",
-		ax25_base91enc(slat, 4, lat),
-		ax25_base91enc(slng, 4, lon),
+		ax25_base91enc(slat, 4, aprs_lat),
+		ax25_base91enc(slng, 4, aprs_lon),
 		alt, stlm
 	);
 	
@@ -642,9 +643,11 @@ void send_APRS() {
     delay(5000);
     ax25_init();
 
+    digitalWrite(9, HIGH);
     delay(1000);
     tx_aprs();
     delay(1000);
+    digitalWrite(9, LOW);
     pinMode(11, INPUT);
     setupRadio();
 }
@@ -652,6 +655,8 @@ void send_APRS() {
 void setup() {
   Serial.begin(9600);
   analogReference(DEFAULT);
+  pinMode(9, OUTPUT);
+  digitalWrite(9, LOW);
   pinMode(A3, OUTPUT); //Radio SDN
   digitalWrite(A3, LOW); // Turn on Radio
   setupRadio(); 
@@ -697,6 +702,8 @@ void loop() {
       aprs_status = 0;
     }
   }
+  
+  send_APRS();
   
   battV = analogRead(0);
   n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, battV, elevation, azimuth, aprs_status, aprs_attempts);
