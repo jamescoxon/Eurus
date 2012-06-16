@@ -59,10 +59,11 @@ volatile static uint8_t  _txlen = 0;
 #define DEBUG false
 Plan13 p13;
 
+//updated 15/6/12
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   12157.96657841  .00011635  00000-0  16950-3 0  6966",
-             "2 25544 051.6374 178.5089 0010395 035.6035 041.5946 15.56157757776262"}
+             "1 25544U 98067A   12166.51132299  .00012501  00000-0  18019-3 0  7458",
+             "2 25544 051.6380 135.7761 0010768 066.6258 034.5777 15.56363414777596"}
  };
 
 //Setup radio on SPI with NSEL on pin 10
@@ -702,8 +703,6 @@ void loop() {
       aprs_status = 0;
     }
   }
-  
-  send_APRS();
   
   battV = analogRead(0);
   n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, battV, elevation, azimuth, aprs_status, aprs_attempts);
