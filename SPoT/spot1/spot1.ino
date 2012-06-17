@@ -1,4 +1,5 @@
 uint8_t buf[60]; //SPoT receive buffer
+int count = 1, msg_sent = 0;
 
 void spotSetup(){
   digitalWrite(6, HIGH);
@@ -55,6 +56,33 @@ void spot_status(){
     spot_get_data();
     
     print_buffer(43);
+    if(buf[0] == 0xAA) { //We have found the header!
+      Serial.print("Status: ");
+      Serial.print(buf[7]);
+      Serial.print(" ");
+      
+      Serial.print("Sats: ");
+      Serial.print(buf[31]);
+      Serial.print(" ");
+      
+      int timeToNextCheckin = (buf[11] << 8) | buf[12];
+      Serial.print("Next Checkin: ");
+      Serial.println(timeToNextCheckin);
+      
+    }
+}
+
+void spot_send(){
+  
+    Serial.flush();
+    // Construct the request to the GPS
+    uint8_t request[12] = {0xAA, 0x0C, 0x26, 0x01, 0x00, 0x01, 0x00, 0x01, 0x54, 0x65, 0x73, 0x74};
+    sendBytes(request, 12);
+    spot_get_data();
+    
+    print_buffer(43);
+    
+    msg_sent = 1;
 }
 
 void print_buffer(int z){
@@ -79,7 +107,13 @@ void setup() {
 }
 
 void loop() {
-  delay(1000);
+  count++;
+  if(count == 10){
+    Serial.println("Sending Msg");
+    spot_send();
+  }
+  delay(5000);
   spot_status();
+  
   
 }
