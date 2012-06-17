@@ -1,5 +1,16 @@
+#include <avr/sleep.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <RTClib.h>
+#include <RTC_DS3234.h>
+
+// Create an RTC instance, using the chip select pin it's connected to
+RTC_DS3234 RTC(10);
+
+DateTime now;
+
 uint8_t buf[60]; //SPoT receive buffer
-int count = 1, msg_sent = 0;
+int count = 1, msg_sent = 0, spot_stat = 0, timeToNextCheckin = 0;
 
 void spotSetup(){
   digitalWrite(6, HIGH);
@@ -11,7 +22,7 @@ void spotSetup(){
   delay(4000);
 }
 
-// Send a byte array of UBX protocol to the SPoT
+// Send a byte array to the SPoT
 void sendBytes(uint8_t *MSG, uint8_t len) {
   for(int i=0; i<len; i++) {
     Serial.write(MSG[i]);
@@ -40,7 +51,6 @@ void spot_get_data()
 
 void spot_unitID(){
     Serial.flush();
-    // Construct the request to the GPS
     uint8_t request[3] = {0xAA, 0x03, 0x01};
     sendBytes(request, 3);
     spot_get_data();
@@ -50,22 +60,22 @@ void spot_unitID(){
 
 void spot_status(){
     Serial.flush();
-    // Construct the request to the GPS
     uint8_t request[3] = {0xAA, 0x03, 0x52};
     sendBytes(request, 3);
     spot_get_data();
     
     print_buffer(43);
     if(buf[0] == 0xAA) { //We have found the header!
+      spot_stat = buf[7];
       Serial.print("Status: ");
-      Serial.print(buf[7]);
+      Serial.print(spot_stat);
       Serial.print(" ");
       
       Serial.print("Sats: ");
       Serial.print(buf[31]);
       Serial.print(" ");
       
-      int timeToNextCheckin = (buf[11] << 8) | buf[12];
+      timeToNextCheckin = (buf[11] << 8) | buf[12];
       Serial.print("Next Checkin: ");
       Serial.println(timeToNextCheckin);
       
@@ -75,7 +85,6 @@ void spot_status(){
 void spot_send(){
   
     Serial.flush();
-    // Construct the request to the GPS
     uint8_t request[12] = {0xAA, 0x0C, 0x26, 0x01, 0x00, 0x01, 0x00, 0x01, 0x54, 0x65, 0x73, 0x74};
     sendBytes(request, 12);
     spot_get_data();
@@ -94,26 +103,92 @@ void print_buffer(int z){
     Serial.println();
 }
 
+void wakeUpNow()        // here the interrupt is handled after wakeup
+{  
+  RTC.reset_alarm(); //Need to reset the alarm otherwise it'll keep triggering
+}
+
+void sleepNow()         // here we put the arduino to sleep
+{
+    /* The 5 different modes are:
+     *     SLEEP_MODE_IDLE         -the least power savings 
+     *     SLEEP_MODE_ADC
+     *     SLEEP_MODE_PWR_SAVE
+     *     SLEEP_MODE_STANDBY
+     *     SLEEP_MODE_PWR_DOWN     -the most power savings
+     * In all but the IDLE sleep modes only LOW can be used.
+     */  
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);   // sleep mode is set here
+
+    sleep_enable();          // enables the sleep bit in the mcucr register
+                             // so sleep is possible. just a safety pin 
+
+    attachInterrupt(1,wakeUpNow, LOW); // use interrupt 0 (pin 2) and run function
+                                       // wakeUpNow when pin 2 gets LOW 
+
+    sleep_mode();            // here the device is actually put to sleep!!
+                             // THE PROGRAM CONTINUES FROM HERE AFTER WAKING UP
+
+    sleep_disable();         // first thing after waking from sleep:
+                             // disable sleep...
+    detachInterrupt(1);      // disables interrupt 0 on pin 2 so the 
+                             // wakeUpNow code will not be executed 
+                             // during normal running time.
+}
+
 void setup() {
   Serial.begin(115200);
   pinMode(7, OUTPUT);
   digitalWrite(7, HIGH);
   pinMode(6, OUTPUT);
+  SPI.begin();
+  
+  //Start up the RTC
+  RTC.begin();  
+  
+  //Set up alarms
+  RTC.set_alarm(2, DateTime(2011,6,23,12,0,0), 0x06);
+  
+  RTC.setup(0,1);
   delay(1000);
-  spotSetup();
-  delay(1000);
-  spot_unitID();
 
 }
 
 void loop() {
-  count++;
-  if(count == 10){
-    Serial.println("Sending Msg");
-    spot_send();
-  }
+  //Setup SPoT
+  spotSetup();
+  delay(1000);
+  spot_unitID();
   delay(5000);
+  //Check that SPoT is communicating with us
   spot_status();
-  
+  if(buf[0] == 0xAA && buf[7] == 0x07){
+    
+    Serial.println("Sending Msg");
+    //1) Send Message
+    spot_send();
+    //2) Setup GPS to Airborne Mode via software serial
+    
+    //3) Wait for transmission to occur
+    while(timeToNextCheckin > 0){
+       delay(5000);
+       spot_status();
+    }
+    //4) Power down SPoT
+    digitalWrite(7, LOW); // Hold down ON/OFF button
+    delay(3000);
+    digitalWrite(7, HIGH);
+    delay(500);
+    digitalWrite(6, LOW); // Power off Regulators
+    //SPoT should now be completely off
+    
+    //5) Set RTC alarm for next wake up
+    
+    //6) Go to sleep
+    sleepNow();
+  }
+  else {
+    delay(10000);
+  }
   
 }
