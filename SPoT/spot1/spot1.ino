@@ -1,3 +1,27 @@
+/*
+* Eurus SPoT Tracker- James Coxon jacoxon@googlemail.com
+* Long duration, East to West, High Altitude balloon flight.
+* Components - Arduino328, Sparkfun SatUplink Board and a SPoT Connect
+*
+* Regular Sat Simplex Comms with powersaving
+*
+* Latest code can be found: https://github.com/jamescoxon/Eurus
+*
+* RTC lib can be found here: https://github.com/jamescoxon/RTClib
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include <avr/sleep.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -13,13 +37,16 @@ uint8_t buf[60]; //SPoT receive buffer
 int count = 1, msg_sent = 0, spot_stat = 0, timeToNextCheckin = 0;
 
 void spotSetup(){
-  digitalWrite(6, HIGH);
+  //Start from the beginning, turn off the regulator to ensure that we've fully powered down
+  digitalWrite(6, LOW); // Power off Regulators
   delay(1000);
-  digitalWrite(7, LOW);
+  digitalWrite(6, HIGH); // Power on Regulators
+  delay(1000);
+  pinMode(7, OUT);
+  digitalWrite(7, LOW); //Start SPoT
   delay(4000);
   pinMode(7, INPUT); //Release on button
-  //digitalWrite(7, HIGH);
-  delay(4000);
+  delay(4000); //Wait for SPoT to power-up
 }
 
 // Send a byte array to the SPoT
