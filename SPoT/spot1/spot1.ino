@@ -189,7 +189,7 @@ void loop() {
   delay(5000);
   //Check that SPoT is communicating with us
   spot_status();
-  if(buf[0] == 0xAA && buf[7] == 0x07){
+  if(buf[0] == 0xAA && buf[7] == 0x00){
     
     Serial.println("Sending Msg");
     //1) Send Message
