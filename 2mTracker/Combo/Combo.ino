@@ -74,6 +74,7 @@ int32_t lat = 0, lon = 0, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0, battV = 0;
 int elevation = 0, azimuth = 0, aprs_status = 0, aprs_attempts = 0;
+long int doppler = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -692,12 +693,22 @@ void loop() {
     p13.calculate(); //crunch the numbers
     elevation = (int)p13.getElevation();
     azimuth = (int)p13.getAz();
+    doppler = p13.getDop();
     
     if (elevation >= 5){
       aprs_status = 1;
       //Transmit APRS data now
       send_APRS();
       aprs_attempts++;
+      
+      while((doppler > 437525000) && (doppler > 437575000)){
+       doppler = p13.getDop();
+       aprs_status = 2;
+       //Transmit APRS data now
+       send_APRS();
+       aprs_attempts++;
+       delay(10000);
+      }
     }
     else {
       aprs_status = 0;
