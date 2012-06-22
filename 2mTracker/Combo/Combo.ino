@@ -62,8 +62,8 @@ Plan13 p13;
 //updated 15/6/12
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   12166.51132299  .00012501  00000-0  18019-3 0  7458",
-             "2 25544 051.6380 135.7761 0010768 066.6258 034.5777 15.56363414777596"}
+             "1 25544U 98067A   12174.28781389  .00005179  00000-0  80671-4 0  7931",
+             "2 25544 051.6395 096.8865 0008319 077.3327 061.4903 15.55727972778806"}
  };
 
 //Setup radio on SPI with NSEL on pin 10
@@ -665,7 +665,6 @@ void setup() {
   
   delay(1000);
   setupGPS();
-  //Serial.print("Finished Setup");
   
 }
 
@@ -700,7 +699,7 @@ void loop() {
       //Transmit APRS data now
       send_APRS();
       aprs_attempts++;
-      
+      /*
       while((doppler > 437525000) && (doppler > 437575000)){
        doppler = p13.getDop();
        aprs_status = 2;
@@ -708,7 +707,9 @@ void loop() {
        send_APRS();
        aprs_attempts++;
        delay(10000);
+       
       }
+      */
     }
     else {
       aprs_status = 0;
