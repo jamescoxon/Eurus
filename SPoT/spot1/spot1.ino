@@ -37,15 +37,18 @@ uint8_t buf[60]; //SPoT receive buffer
 int count = 1, msg_sent = 0, spot_stat = 0, timeToNextCheckin = 0;
 
 void spotSetup(){
+  pinMode(7, OUTPUT);
+  digitalWrite(7, HIGH); //Start SPoT
   //Start from the beginning, turn off the regulator to ensure that we've fully powered down
   digitalWrite(6, LOW); // Power off Regulators
-  delay(1000);
+  delay(5000);
   digitalWrite(6, HIGH); // Power on Regulators
-  delay(1000);
-  pinMode(7, OUT);
+  delay(5000);
+  
   digitalWrite(7, LOW); //Start SPoT
   delay(4000);
-  pinMode(7, INPUT); //Release on button
+  digitalWrite(7, HIGH); //Start SPoT
+  //pinMode(7, INPUT); //Release on button
   delay(4000); //Wait for SPoT to power-up
 }
 
@@ -173,8 +176,10 @@ void setup() {
   //Start up the RTC
   RTC.begin();  
   
+  RTC.adjust(DateTime(__DATE__, __TIME__));
+  
   //Set up alarms
-  RTC.set_alarm(2, DateTime(2011,6,23,12,0,0), 0x06);
+  RTC.set_alarm(2, DateTime(__DATE__, __TIME__), 0x07);
   
   RTC.setup(0,1);
   delay(1000);
@@ -182,24 +187,39 @@ void setup() {
 }
 
 void loop() {
+  
   //Setup SPoT
   spotSetup();
-  delay(1000);
-  spot_unitID();
-  delay(5000);
+  delay(25000);
+  spot_status();
   //Check that SPoT is communicating with us
   spot_status();
+  delay(1000);
   if(buf[0] == 0xAA && buf[7] == 0x00){
     
     Serial.println("Sending Msg");
     //1) Send Message
     spot_send();
+    delay(5000);
+    spot_status();
     //2) Setup GPS to Airborne Mode via software serial
     
     //3) Wait for transmission to occur
+    int timeToNextCheckin_old = 999;
     while(timeToNextCheckin > 0){
-       delay(5000);
+      
+       delay(10000);
        spot_status();
+       
+       //Sometimes SPoT has a habit of freezing, this is to check if its not responding, but breaking out of the 
+       // while loop we then turn off the SPoT and try again later.
+       if(timeToNextCheckin >= timeToNextCheckin_old){
+         Serial.println("Breaking loop");
+         break;
+       }
+       else {
+       timeToNextCheckin_old = timeToNextCheckin;
+      }
     }
     //4) Power down SPoT
     digitalWrite(7, LOW); // Hold down ON/OFF button
@@ -210,12 +230,10 @@ void loop() {
     //SPoT should now be completely off
     
     //5) Set RTC alarm for next wake up
-    
+  }
     //6) Go to sleep
+    Serial.println("Going to sleep");
+    delay(1000);
     sleepNow();
-  }
-  else {
-    delay(10000);
-  }
   
 }
