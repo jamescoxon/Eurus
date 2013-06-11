@@ -62,8 +62,8 @@ Plan13 p13;
 //updated 15/6/12
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   12174.28781389  .00005179  00000-0  80671-4 0  7931",
-             "2 25544 051.6395 096.8865 0008319 077.3327 061.4903 15.55727972778806"}
+             "1 25544U 98067A   13162.13437632  .00006132  00000-0  11226-3 0  9786",
+             "2 25544 051.6460 138.3553 0010708 056.9777 045.4629 15.50750500833764"}
  };
 
 //Setup radio on SPI with NSEL on pin 10
@@ -685,31 +685,18 @@ void loop() {
     //First setup plan13 stuff
     p13.setFrequency(437550000, 437550000);//ISS 70cm beacon frequency
     p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); //THIS NEEDS TO BE LON, LAT
-    p13.setTime(2012, month, day, hour, minute, second);
+    p13.setTime(2013, month, day, hour, minute, second);
     
     //ISS
     readElements(0);
     p13.calculate(); //crunch the numbers
     elevation = (int)p13.getElevation();
-    azimuth = (int)p13.getAz();
-    doppler = p13.getDop();
     
     if (elevation >= 5){
       aprs_status = 1;
       //Transmit APRS data now
       send_APRS();
       aprs_attempts++;
-      /*
-      while((doppler > 437525000) && (doppler > 437575000)){
-       doppler = p13.getDop();
-       aprs_status = 2;
-       //Transmit APRS data now
-       send_APRS();
-       aprs_attempts++;
-       delay(10000);
-       
-      }
-      */
     }
     else {
       aprs_status = 0;
@@ -717,7 +704,7 @@ void loop() {
   }
   
   battV = analogRead(0);
-  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, battV, elevation, azimuth, aprs_status, aprs_attempts);
+  n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, battV, elevation, aprs_status, aprs_attempts);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
   
   rtty_txstring(superbuffer);
