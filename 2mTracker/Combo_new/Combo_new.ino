@@ -70,11 +70,10 @@ char * elements[1][3] ={
 rfm22 radio1(10);
 
 //Variables
-int32_t lat = 0, lon = 0, alt = 0;
+int32_t lat = 514981000, lon = -530000, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0, battV = 0;
-int elevation = 0, azimuth = 0, aprs_status = 0, aprs_attempts = 0;
-long int doppler = 0;
+int elevation = 0, aprs_status = 0, aprs_attempts = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -655,17 +654,18 @@ void send_APRS() {
 }
 
 void setup() {
+  pinMode(13, OUTPUT);
   Serial.begin(9600);
   analogReference(DEFAULT);
   pinMode(9, OUTPUT);
   digitalWrite(9, LOW);
   pinMode(A3, OUTPUT); //Radio SDN
   digitalWrite(A3, LOW); // Turn on Radio
-  setupRadio(); 
+  //setupRadio(); 
   
   delay(1000);
   setupGPS();
-  
+  digitalWrite(13, HIGH);
 }
 
 void loop() {
@@ -681,7 +681,8 @@ void loop() {
   gps_get_position();
   gps_get_time();
 
-  if ((lock == 3) && (count % 2 == 0)){
+  //if ((lock == 3) && (count % 2 == 0)){
+    digitalWrite(13, HIGH);
     //First setup plan13 stuff
     p13.setFrequency(437550000, 437550000);//ISS 70cm beacon frequency
     p13.setLocation(((double)lon / 10000000.0) , ((double)lat / 10000000.0), alt); //THIS NEEDS TO BE LON, LAT
@@ -701,13 +702,20 @@ void loop() {
     else {
       aprs_status = 0;
     }
-  }
+      
+    //delay(1000);
+    digitalWrite(13, LOW);
+  //}
   
   battV = analogRead(0);
+  
+  
   n=sprintf (superbuffer, "$$EURUS,%d,%02d:%02d:%02d,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%d", count, hour, minute, second, lat, lon, alt, sats, lock, navmode, battV, elevation, aprs_status, aprs_attempts);
   n = sprintf (superbuffer, "%s*%04X\n", superbuffer, gps_CRC16_checksum(superbuffer));
   
-  rtty_txstring(superbuffer);
+  //rtty_txstring(superbuffer);
+
+  Serial.println(superbuffer);
   
   if (count % 50 == 0){
     
