@@ -639,18 +639,17 @@ char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
 }
 
 void send_APRS() {
-    SPI.end();
     //digitalWrite(A3, HIGH);
-    delay(5000);
-    ax25_init();
+    delay(2000);
+    //ax25_init();
 
     digitalWrite(9, HIGH);
     delay(1000);
     tx_aprs();
     delay(1000);
     digitalWrite(9, LOW);
-    pinMode(11, INPUT);
-    setupRadio();
+    //pinMode(11, INPUT);
+    //setupRadio();
 }
 
 void setup() {
@@ -666,6 +665,7 @@ void setup() {
   delay(1000);
   setupGPS();
   digitalWrite(13, HIGH);
+  ax25_init();
 }
 
 void loop() {
@@ -717,6 +717,11 @@ void loop() {
 
   Serial.println(superbuffer);
   
+  if (count % 10 == 0){
+      //Transmit APRS data now
+      send_APRS();
+      aprs_attempts++;
+  }
   if (count % 50 == 0){
     
     //Send commands to GPS
@@ -725,7 +730,7 @@ void loop() {
     //Reboot Radio
     digitalWrite(A3, HIGH);
     delay(1000);
-    setupRadio();
+    //setupRadio();
   }
 
 }
