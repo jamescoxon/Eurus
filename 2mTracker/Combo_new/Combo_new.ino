@@ -382,7 +382,7 @@ void readElements(int x)//order in the array above
 		APRS_CALLSIGN, APRS_SSID,
 		"APRS", 0,
 		//0, 0, 0, 0,
-                "ARISS", 1, 0,0,
+                "ARISS", 0, 0, 0,
 		//"WIDE2", 1,
 		"!/%s%sO   /A=%06ld|%s|",
 		ax25_base91enc(slat, 4, aprs_lat),
