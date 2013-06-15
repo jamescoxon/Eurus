@@ -23,8 +23,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <SPI.h>
-#include <RFM22.h>
 #include <util/crc16.h>
 
 #include <Plan13.h>
@@ -66,8 +64,6 @@ char * elements[1][3] ={
              "2 25544 051.6460 138.3553 0010708 056.9777 045.4629 15.50750500833764"}
  };
 
-//Setup radio on SPI with NSEL on pin 10
-rfm22 radio1(10);
 
 //Variables
 int32_t lat = 514981000, lon = -530000, alt = 0;
@@ -78,63 +74,6 @@ int elevation = 0, aprs_status = 0, aprs_attempts = 0;
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
 
-// RTTY Functions - from RJHARRISON's AVR Code
-void rtty_txstring (char * string)
-{
-
-	/* Simple function to sent a char at a time to 
-	** rtty_txbyte function. 
-	** NB Each char is one byte (8 Bits)
-	*/
-	char c;
-	c = *string++;
-	while ( c != '\0')
-	{
-		rtty_txbyte (c);
-		c = *string++;
-	}
-}
-
-void rtty_txbyte (char c)
-{
-	/* Simple function to sent each bit of a char to 
-	** rtty_txbit function. 
-	** NB The bits are sent Least Significant Bit first
-	**
-	** All chars should be preceded with a 0 and 
-	** proceded with a 1. 0 = Start bit; 1 = Stop bit
-	**
-	** ASCII_BIT = 7 or 8 for ASCII-7 / ASCII-8
-	*/
-	int i;
-	rtty_txbit (0); // Start bit
-	// Send bits for for char LSB first	
-	for (i=0;i<8;i++)
-	{
-		if (c & 1) rtty_txbit(1); 
-			else rtty_txbit(0);	
-		c = c >> 1;
-	}
-	rtty_txbit (1); // Stop bit
-        rtty_txbit (1); // Stop bit
-}
-
-void rtty_txbit (int bit)
-{
-		if (bit)
-		{
-  		  // low (using Navrac's version)
-                  radio1.write(0x073, 0x03);
-		}
-		else
-		{
-		  // high (using Navrac's version)
-                  radio1.write(0x073, 0x00);
-		}
-                delayMicroseconds(19500); // 10000 = 100 BAUD 20150
-
-}  
-
 // Send a byte array of UBX protocol to the GPS
 void sendUBX(uint8_t *MSG, uint8_t len) {
   for(int i=0; i<len; i++) {
@@ -142,29 +81,6 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
   }
 }
 
-void setupRadio(){
-  
-  digitalWrite(A3, LOW); // Turn on Radio
-  
-  delay(1000);
-  
-  radio1.initSPI();
-
-  radio1.init();
-  
-  radio1.write(0x71, 0x00); // unmodulated carrier
- 
-  //This sets up the GPIOs to automatically switch the antenna depending on Tx or Rx state, only needs to be done at start up
-  radio1.write(0x0b,0x12);
-  radio1.write(0x0c,0x15);
-  
-  radio1.setFrequency(434.201);
-  
-  radio1.write(0x6D, 0x04);// turn tx low power 11db
-  
-  radio1.write(0x07, 0x08); // turn tx on
-  
-}
 //************Other Functions*****************
 
 uint16_t gps_CRC16_checksum (char *string)
@@ -466,7 +382,7 @@ void readElements(int x)//order in the array above
 		APRS_CALLSIGN, APRS_SSID,
 		"APRS", 0,
 		//0, 0, 0, 0,
-                "WIDE1", 1, 0,0,
+                "ARISS", 1, 0,0,
 		//"WIDE2", 1,
 		"!/%s%sO   /A=%06ld|%s|",
 		ax25_base91enc(slat, 4, aprs_lat),
@@ -648,8 +564,6 @@ void send_APRS() {
     tx_aprs();
     delay(1000);
     digitalWrite(9, LOW);
-    //pinMode(11, INPUT);
-    //setupRadio();
 }
 
 void setup() {
@@ -658,9 +572,6 @@ void setup() {
   analogReference(DEFAULT);
   pinMode(9, OUTPUT);
   digitalWrite(9, LOW);
-  pinMode(A3, OUTPUT); //Radio SDN
-  digitalWrite(A3, LOW); // Turn on Radio
-  //setupRadio(); 
   
   delay(1000);
   setupGPS();
@@ -726,11 +637,6 @@ void loop() {
     
     //Send commands to GPS
     setupGPS();
-    
-    //Reboot Radio
-    digitalWrite(A3, HIGH);
-    delay(1000);
-    //setupRadio();
   }
 
 }
