@@ -492,7 +492,10 @@ static uint8_t *_ax25_callsign(uint8_t *s, char *callsign, char ssid)
 		if(*callsign) *(s++) = *(callsign++) << 1;
 		else *(s++) = ' ' << 1;
 	}
-	*(s++) = ('0' + ssid) << 1;
+        if(*callsign != 'ARISS'){
+	  *(s++) = ('0' + ssid) << 1;
+        }
+        
 	return(s);
 }
 
@@ -609,6 +612,7 @@ void loop() {
       //Transmit APRS data now
       send_APRS();
       aprs_attempts++;
+      delay(10000);
     }
     else {
       aprs_status = 0;
