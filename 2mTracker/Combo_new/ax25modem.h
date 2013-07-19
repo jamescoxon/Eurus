@@ -22,7 +22,7 @@
 
 //#define APRS_ENABLED
 #define APRS_CALLSIGN "M6JCX"
-#define APRS_SSID     (0)
+#define APRS_SSID     (11)
 
 extern void ax25_init(void);
 extern void ax25_frame(char *scallsign, char sssid, char *dcallsign, char dssid,

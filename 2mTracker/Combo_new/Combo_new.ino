@@ -40,7 +40,7 @@ static const uint8_t PROGMEM _sine_table[] = {
 
 #define BAUD_RATE      (1200)
 #define TABLE_SIZE     (512)
-#define PREAMBLE_BYTES (25)
+#define PREAMBLE_BYTES (50)
 #define REST_BYTES     (5)
 
 #define PLAYBACK_RATE    (F_CPU / 256)
@@ -60,8 +60,8 @@ Plan13 p13;
 //updated 15/6/12
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   13162.13437632  .00006132  00000-0  11226-3 0  9786",
-             "2 25544 051.6460 138.3553 0010708 056.9777 045.4629 15.50750500833764"}
+             "1 25544U 98067A   13199.72157074  .00009635  00000-0  17713-3 0  2129",
+             "2 25544 051.6501 312.0646 0004963 195.4055 315.5742 15.49907351839598"}
  };
 
 
@@ -69,7 +69,7 @@ char * elements[1][3] ={
 int32_t lat = 514981000, lon = -530000, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0, battV = 0;
-int elevation = 0, aprs_status = 0, aprs_attempts = 0;
+int elevation = 0, aprs_status = 0, aprs_attempts = 0, iss_in_view = 0;
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -378,18 +378,41 @@ void readElements(int x)//order in the array above
 	/* Construct the compressed telemetry format */
 	ax25_base91enc(stlm + 0, 2, seq);
 	
-	ax25_frame(
+        if(iss_in_view == 1){
+	  ax25_frame(
 		APRS_CALLSIGN, APRS_SSID,
 		"APRS", 0,
-		//0, 0, 0, 0,
-                //"ARISS", 0, 0, 0,
-                "WIDE2", 1, 0, 0,
-		//"WIDE2", 1,
-		"!/%s%sO   /A=%06ld|%s|",
+
+                //ISS
+                "ARISS", 0, "WIDE2", 1,
+                
+                //GROUND_APRS
+                //"WIDE2", 1, 0, 0,
+		
+		"!/%s%sO   /A=%06ld|%s|%d/%d/%d",
 		ax25_base91enc(slat, 4, aprs_lat),
 		ax25_base91enc(slng, 4, aprs_lon),
-		alt, stlm
-	);
+		alt, stlm, count, aprs_attempts, elevation
+	  );
+        }
+        else {
+          ax25_frame(
+		APRS_CALLSIGN, APRS_SSID,
+		"APRS", 0,
+
+                //ISS
+                //"ARISS", 0, "WIDE2", 1,
+                
+                //GROUND_APRS
+                "WIDE2", 1, 0, 0,
+		
+		"!/%s%sO   /A=%06ld|%s|%d/%d/%d",
+		ax25_base91enc(slat, 4, aprs_lat),
+		ax25_base91enc(slng, 4, aprs_lon),
+		alt, stlm, count, aprs_attempts, elevation
+	  );
+        }
+        
 	
 	seq++;
 }
@@ -557,15 +580,17 @@ char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
 }
 
 void send_APRS() {
-    //digitalWrite(A3, HIGH);
+  
+    tone(11, 1200, 100);
+    digitalWrite(11,LOW);
     delay(2000);
-    //ax25_init();
-
-    digitalWrite(9, HIGH);
+    ax25_init();
     delay(1000);
     tx_aprs();
-    delay(1000);
-    digitalWrite(9, LOW);
+    delay(2000);
+    tone(11, 1200, 100);
+    digitalWrite(11,LOW);
+    
 }
 
 void setup() {
@@ -578,7 +603,7 @@ void setup() {
   delay(1000);
   setupGPS();
   digitalWrite(13, HIGH);
-  ax25_init();
+  //ax25_init();
 }
 
 void loop() {
@@ -586,9 +611,11 @@ void loop() {
   
   gps_check_nav();
   
+  
   if(navmode != 6) {
     setupGPS();
   }
+  
   
   gps_check_lock();
   gps_get_position();
@@ -609,6 +636,7 @@ void loop() {
     if (elevation >= 5){
       aprs_status = 1;
       //Transmit APRS data now
+      iss_in_view = 1;
       send_APRS();
       aprs_attempts++;
       delay(10000);
@@ -631,8 +659,9 @@ void loop() {
 
   Serial.println(superbuffer);
   
-  if (count % 10 == 0){
+  if (count % 40 == 0){
       //Transmit APRS data now
+      iss_in_view = 0;
       send_APRS();
       aprs_attempts++;
   }
