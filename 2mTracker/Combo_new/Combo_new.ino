@@ -60,8 +60,8 @@ Plan13 p13;
 //updated 15/6/12
 char * elements[1][3] ={
              {"ISS (ZARYA)",
-             "1 25544U 98067A   13200.22497920  .00009504  00000-0  17479-3 0  2151",
-             "2 25544 051.6503 309.5709 0004934 196.7466 244.9471 15.49916971839670"}
+             "1 25544U 98067A   13222.47840045  .00026296  00000-0  46297-3 0  3644",
+             "2 25544 051.6490 199.3300 0004086 300.7937 205.0044 15.50253672843128"}
  };
 
 
@@ -70,6 +70,7 @@ int32_t lat = 514981000, lon = -530000, alt = 0;
 uint8_t hour = 0, minute = 0, second = 0, month = 0, day = 0, lock = 0, sats = 0;
 int GPSerror = 0, count = 1, n, gpsstatus, navmode = 0, battV = 0;
 int elevation = 0, aprs_status = 0, aprs_attempts = 0, iss_in_view = 0;
+int freq_setting = 0; //Freq 0 = 144.800 Freq 1 = 145.825
 
 uint8_t buf[60]; //GPS receive buffer
 char superbuffer [80]; //Telem string buffer
@@ -581,26 +582,57 @@ char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
 
 void send_APRS() {
   
-    tone(11, 1200, 100);
+    digitalWrite(12,HIGH);
     digitalWrite(11,LOW);
-    delay(2000);
+    delay(500);
     ax25_init();
     delay(1000);
     tx_aprs();
     delay(2000);
-    tone(11, 1200, 100);
-    digitalWrite(11,LOW);
+    //tone(11, 1200, 100);
+    digitalWrite(11,LOW); 
+    digitalWrite(12,LOW);
     
+}
+
+//Freq 0 = 144.800 Freq 1 = 145.825
+void switch_freq(int i){
+  if (i == 0) {
+    if (freq_setting == 1) {
+      freq_setting = 0;
+      digitalWrite(8, HIGH);
+      delay(50);
+      digitalWrite(8, LOW);
+      delay(3000);
+    }
+  }
+  if (i == 1) {
+    if (freq_setting == 0) {
+      freq_setting = 1;
+      digitalWrite(8, HIGH);
+      delay(50);
+      digitalWrite(8, LOW);
+      delay(3000);
+    }
+  }
+  
 }
 
 void setup() {
   pinMode(13, OUTPUT);
+  pinMode(8, OUTPUT);
+  digitalWrite(8, LOW);
   Serial.begin(9600);
   analogReference(DEFAULT);
   pinMode(9, OUTPUT);
   digitalWrite(9, LOW);
+  pinMode(12, OUTPUT);
+  digitalWrite(12, LOW);
   
   delay(1000);
+  
+  switch_freq(1);
+  
   setupGPS();
   digitalWrite(13, HIGH);
   //ax25_init();
@@ -637,6 +669,7 @@ void loop() {
       aprs_status = 1;
       //Transmit APRS data now
       iss_in_view = 1;
+      switch_freq(1);
       send_APRS();
       aprs_attempts++;
       delay(10000);
@@ -659,7 +692,8 @@ void loop() {
 
   Serial.println(superbuffer);
   
-  if (count % 40 == 0){
+  if ((count % 10 == 0) && (aprs_status == 0)){
+      switch_freq(0);
       //Transmit APRS data now
       iss_in_view = 0;
       send_APRS();
